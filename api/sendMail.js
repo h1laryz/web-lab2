@@ -1,9 +1,6 @@
 import { createTransport } from "nodemailer";
 import sanitizeHtml from "sanitize-html";
-
 require("dotenv").config();
-const from = `Form - ${process.env.EMAIL_ADRESS}`;
-const history = new Map();
 
 function getTransporter() {
   return createTransport({
@@ -17,26 +14,16 @@ function getTransporter() {
   });
 }
 
-const rateLimit = (ip, limit) => {
-  if (!history.has(ip)) {
-    history.set(ip, 0);
-  }
-  if (history.get(ip) > limit) {
-    throw new Error();
-  }
-  history.set(ip, history.get(ip) + 1);
-};
-
 async function sendMail(options) {
   try {
     const transport = getTransporter();
     await transport.sendMail(options);
     return { success: true };
   } catch (error) {
-    throw new Error(error.message);
+    throw new Error(error?.message);
   }
 }
-
+const from = `Paul Vasssssss - ${process.env.EMAIL_ADRESS}`;
 async function formSubmit(formData) {
   let html = "";
   for (const option in formData) {
@@ -50,51 +37,59 @@ async function formSubmit(formData) {
   });
 }
 
-module.exports = async (req, res) => {
-  try {
-    validation(req.body);
-  } catch (e) {
-    return res.status(402).json({
-      errors: ["Validation error"],
-    });
+const history = new Map();
+const rateLimit = (ip, limit = 3) => {
+  if (!history.has(ip)) {
+    history.set(ip, 0);
   }
+  if (history.get(ip) > limit) {
+    throw new Error();
+  }
+  history.set(ip, history.get(ip) + 1);
+};
 
+const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const nameValid = /[a-zA-ZЁёА-я]+$/;
+
+const validate = (body) => {
+  const { email, name, password, confirmPassword } = body;
+  if (!email || !name || !password || !confirmPassword) {
+    throw new Error();
+  }
+  if (!emailValid.test(email)) {
+    throw new Error();
+  }
+  if (!nameValid.test(name)) {
+    throw new Error();
+  }
+  if (password !== confirmPassword) {
+    throw new Error();
+  }
+};
+
+module.exports = async (req, res) => {
   try {
     rateLimit(req.headers["x-real-ip"], 5);
   } catch (e) {
     return res.status(429).json({
-      error: ["Too many requests"],
+      status: 429,
+      errors: ["too many requests"],
+      result: {
+        success: false,
+      },
+    });
+  }
+  try {
+    validate(req.body);
+  } catch (e) {
+    return res.status(403).json({
+      status: 403,
+      errors: ["Validation error"],
+      result: {
+        success: false,
+      },
     });
   }
   const result = await formSubmit(req.body);
-  return res.json({ result });
+  res.json({ result });
 };
-
-function validation(formData) {
-  const email = formData.email;
-  const pword = formData.password;
-  const confpword = formData.confirmPassword;
-  const number = formData.number;
-  if (!emailValidation(email)) throw new Error("bad email");
-  if (!pwordValidation(pword, confpword)) throw new Error("pword");
-  if (!numberValidation(number)) throw new Error("number");
-  return true;
-}
-
-function emailValidation(email) {
-  const re =
-    // eslint-disable-next-line max-len
-    /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
-  return re.test(String(email).toLowerCase());
-}
-
-function pwordValidation(pword, confpword) {
-  if (pword === confpword) return true;
-  return false;
-}
-
-function numberValidation(number) {
-  // eslint-disable-next-line no-useless-escape
-  const re = /^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/im;
-  return re.test(String(number));
-}

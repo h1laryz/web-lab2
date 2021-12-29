@@ -15,7 +15,7 @@ body {
 }
 
 a {
-  color: rgb(0 100 200);
+  color: rgb(0, 100, 200);
   text-decoration: none;
 }
 
@@ -24,7 +24,7 @@ a:hover {
 }
 
 a:visited {
-  color: rgb(0 80 160);
+  color: rgb(0, 80, 160);
 }
 
 label {
@@ -39,7 +39,7 @@ textarea {
   font-size: inherit;
   -webkit-padding: 0.4em 0;
   padding: 0.4em;
-  margin: 0 0 0.5em;
+  margin: 0 0 0.5em 0;
   box-sizing: border-box;
   border: 1px solid #ccc;
   border-radius: 2px;
