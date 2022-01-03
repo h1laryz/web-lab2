@@ -3,8 +3,8 @@ import sanitizeHtml from "sanitize-html";
 require("dotenv").config();
 
 const transport = createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
+  host: process.env.EMAIL_HOST,
+  port: process.env.EMAIL_PORT,
   secure: false,
   auth: {
     user: process.env.EMAIL_ADRESS,
@@ -17,7 +17,7 @@ async function sendMail(options) {
     await transport.sendMail(options);
     return { success: true };
   } catch (error) {
-    throw new Error(error?.message);
+    throw ApiError("Email wasn't sent", 500);
   }
 }
 const from = `Paul Vasssssss - ${process.env.EMAIL_ADRESS}`;
@@ -38,7 +38,7 @@ const history = new Map();
 const rateLimit = (ip, limit = 3) => {
   const count = history.get(ip) || 0;
   if (count >= limit) {
-    throw new Error();
+    throw ApiError("Rate limit", 429);
   }
   history.set(ip, count + 1);
 };
@@ -49,42 +49,38 @@ const nameValid = /[a-zA-ZЁёА-я]+$/;
 const validate = (body) => {
   const { email, name, password, confirmPassword } = body;
   if (!email || !name || !password || !confirmPassword) {
-    throw new Error();
+    throw ApiError("Fields empty", 400);
   }
   if (!emailValid.test(email)) {
-    throw new Error();
+    throw ApiError("Email is valid", 400);
   }
   if (!nameValid.test(name)) {
-    throw new Error();
+    throw ApiError("Name is not valid", 400);
   }
   if (password !== confirmPassword) {
-    throw new Error();
+    throw ApiError("Passwords not valid", 400);
   }
 };
 
+function ApiError(message, status) {
+  const e = new Error(message);
+  e.status = status;
+  return e;
+}
+
 module.exports = async (req, res) => {
   try {
-    rateLimit(req.headers["x-real-ip"], 5);
-  } catch (e) {
-    return res.status(429).json({
-      status: 429,
-      errors: ["too many requests"],
-      result: {
-        success: false,
-      },
-    });
-  }
-  try {
+    rateLimit(req.headers["x-real-ip"], 2);
     validate(req.body);
+    const result = await formSubmit(req.body);
+    res.json({ result });
   } catch (e) {
-    return res.status(403).json({
-      status: 403,
-      errors: ["Validation error"],
+    return res.status(e.status).json({
+      status: e.status,
+      errors: [e.message],
       result: {
         success: false,
       },
     });
   }
-  const result = await formSubmit(req.body);
-  res.json({ result });
 };

@@ -5,16 +5,23 @@
   const formData = {};
   const submit = async () => {
     isLoading = true;
-    const response = await fetch("/api/sendMail", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json;charset=utf-8",
-      },
-      body: JSON.stringify(formData),
-    });
-    const result = await response.json();
-    resultText.set(result.result.success ? "Success!" : "Failure");
-    isLoading = false;
+    try {
+      const response = await fetch("/api/sendMail", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json;charset=utf-8",
+        },
+        body: JSON.stringify(formData),
+      });
+      const result = await response.json();
+      resultText.set(
+        result.result.success ? "Success!" : result.errors.join("\n"),
+      );
+    } catch (e) {
+      resultText.set(e.message);
+    } finally {
+      isLoading = false;
+    }
   };
 </script>
 
@@ -58,6 +65,12 @@
 </main>
 
 <style>
+  :root {
+    --black: #000;
+    --primary-green: rgb(53, 235, 62);
+    --hover-green: rgb(99, 197, 0);
+    --white: #fff;
+  }
   main {
     text-align: center;
     padding: 1em;
@@ -65,17 +78,17 @@
     margin: 0 auto;
   }
   form {
-    border: 1px solid #000;
+    border: 1px solid var(--black);
     padding: 20px;
     border-radius: 10px;
   }
   input[type="submit"] {
     margin-top: 20px;
-    background-color: rgb(53, 235, 62);
-    color: #fff;
+    background-color: var(--primary-green);
+    color: var(--white);
     cursor: pointer;
   }
   input[type="submit"]:hover {
-    background-color: rgb(99, 197, 0);
+    background-color: var(--hover-green);
   }
 </style>
