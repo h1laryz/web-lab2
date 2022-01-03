@@ -2,21 +2,18 @@ import { createTransport } from "nodemailer";
 import sanitizeHtml from "sanitize-html";
 require("dotenv").config();
 
-function getTransporter() {
-  return createTransport({
-    host: "smtp.gmail.com",
-    port: 587,
-    secure: false,
-    auth: {
-      user: process.env.EMAIL_ADRESS,
-      pass: process.env.EMAIL_PASSWORD,
-    },
-  });
-}
+const transport = createTransport({
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false,
+  auth: {
+    user: process.env.EMAIL_ADRESS,
+    pass: process.env.EMAIL_PASSWORD,
+  },
+});
 
 async function sendMail(options) {
   try {
-    const transport = getTransporter();
     await transport.sendMail(options);
     return { success: true };
   } catch (error) {
@@ -39,13 +36,11 @@ async function formSubmit(formData) {
 
 const history = new Map();
 const rateLimit = (ip, limit = 3) => {
-  if (!history.has(ip)) {
-    history.set(ip, 0);
-  }
-  if (history.get(ip) > limit) {
+  const count = history.get(ip) || 0;
+  if (count >= limit) {
     throw new Error();
   }
-  history.set(ip, history.get(ip) + 1);
+  history.set(ip, count + 1);
 };
 
 const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
